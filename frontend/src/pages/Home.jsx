@@ -51,7 +51,7 @@ const Home = () => {
       setMovieList(data.results);
 
       if (query && data.results[0]) {
-        await fetch(`${BACKEND}/movies/search-count`, {
+        await fetch(`${BACKEND}/api/movies/search-count`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ searchTerm: query, movie: data.results[0] }),

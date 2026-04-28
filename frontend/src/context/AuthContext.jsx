@@ -3,9 +3,19 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 const AuthContext = createContext(null);
 const API = 'https://cloudtv-s74y.onrender.com';
 
+// helpers to persist user in localStorage
+const saveUser = (user) => localStorage.setItem('mm_user', JSON.stringify(user));
+const loadUser = () => {
+  try { return JSON.parse(localStorage.getItem('mm_user')); }
+  catch { return null; }
+};
+const clearAuth = () => {
+  localStorage.removeItem('mm_token');
+  localStorage.removeItem('mm_user');
+};
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => loadUser()); // restore instantly from localStorage
   const [token, setToken] = useState(() => localStorage.getItem('mm_token'));
   const [loading, setLoading] = useState(true);
 
@@ -17,10 +27,26 @@ export const AuthProvider = ({ children }) => {
   // Restore session on mount
   useEffect(() => {
     if (!token) { setLoading(false); return; }
-    fetch(`${API}/auth/me`, { headers: authHeaders() })
-      .then(r => r.json())
-      .then(data => { if (data.user) setUser(data.user); })
-      .catch(() => { localStorage.removeItem('mm_token'); setToken(null); })
+
+    fetch(`${API}/api/auth/me`, { headers: authHeaders() }) // fixed: added /api/
+      .then(async (r) => {
+        if (r.status === 401) {
+          // Token truly expired/invalid → logout
+          clearAuth();
+          setToken(null);
+          setUser(null);
+          return;
+        }
+        const data = await r.json();
+        if (data.user) {
+          setUser(data.user);
+          saveUser(data.user);
+        }
+      })
+      .catch(() => {
+        // Network error / server offline → keep cached session, do NOT logout
+        console.warn('Backend unreachable — keeping cached session.');
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -35,6 +61,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('mm_token', data.token);
     setToken(data.token);
     setUser(data.user);
+    saveUser(data.user);
     return data.user;
   };
 
@@ -49,11 +76,12 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('mm_token', data.token);
     setToken(data.token);
     setUser(data.user);
+    saveUser(data.user);
     return data.user;
   };
 
   const logout = () => {
-    localStorage.removeItem('mm_token');
+    clearAuth();
     setToken(null);
     setUser(null);
   };
@@ -72,7 +100,7 @@ export const AuthProvider = ({ children }) => {
       }),
     });
     const data = await res.json();
-    if (res.ok) setUser(prev => ({ ...prev, watchlist: data.watchlist }));
+    if (res.ok) setUser(prev => { const u = { ...prev, watchlist: data.watchlist }; saveUser(u); return u; });
     else if (res.status !== 409) throw new Error(data.message);
   };
 
@@ -82,7 +110,7 @@ export const AuthProvider = ({ children }) => {
       headers: authHeaders(),
     });
     const data = await res.json();
-    if (res.ok) setUser(prev => ({ ...prev, watchlist: data.watchlist }));
+    if (res.ok) setUser(prev => { const u = { ...prev, watchlist: data.watchlist }; saveUser(u); return u; });
   };
 
   // Favourites helpers
@@ -99,7 +127,7 @@ export const AuthProvider = ({ children }) => {
       }),
     });
     const data = await res.json();
-    if (res.ok) setUser(prev => ({ ...prev, favourites: data.favourites }));
+    if (res.ok) setUser(prev => { const u = { ...prev, favourites: data.favourites }; saveUser(u); return u; });
     else if (res.status !== 409) throw new Error(data.message);
   };
 
@@ -109,7 +137,7 @@ export const AuthProvider = ({ children }) => {
       headers: authHeaders(),
     });
     const data = await res.json();
-    if (res.ok) setUser(prev => ({ ...prev, favourites: data.favourites }));
+    if (res.ok) setUser(prev => { const u = { ...prev, favourites: data.favourites }; saveUser(u); return u; });
   };
 
   const isInWatchlist = (movieId) => user?.watchlist?.some(m => m.movieId === movieId) ?? false;

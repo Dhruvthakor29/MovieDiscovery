@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }) => {
 
   // Watchlist helpers
   const addToWatchlist = async (movie) => {
-    const res = await fetch(`${API}/user/watchlist`, {
+    const res = await fetch(`${API}/api/user/watchlist`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({
@@ -77,7 +77,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const removeFromWatchlist = async (movieId) => {
-    const res = await fetch(`${API}/user/watchlist/${movieId}`, {
+    const res = await fetch(`${API}/api/user/watchlist/${movieId}`, {
       method: 'DELETE',
       headers: authHeaders(),
     });
@@ -87,7 +87,7 @@ export const AuthProvider = ({ children }) => {
 
   // Favourites helpers
   const addToFavourites = async (movie) => {
-    const res = await fetch(`${API}/user/favourites`, {
+    const res = await fetch(`${API}/api/user/favourites`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({
@@ -104,7 +104,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const removeFromFavourites = async (movieId) => {
-    const res = await fetch(`${API}/user/favourites/${movieId}`, {
+    const res = await fetch(`${API}/api/user/favourites/${movieId}`, {
       method: 'DELETE',
       headers: authHeaders(),
     });

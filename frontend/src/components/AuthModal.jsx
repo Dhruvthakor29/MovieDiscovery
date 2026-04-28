@@ -82,9 +82,9 @@ const AuthModal = ({ onClose }) => {
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-6 pb-6 flex flex-col gap-4">
           {mode === 'register' && (
-            <Input label="Username" type="text" value={form.username} onChange={set('username')} placeholder="johndoe" />
+            <Input label="Username" type="text" value={form.username} onChange={set('username')} placeholder="Enter Username" />
           )}
-          <Input label="Email" type="email" value={form.email} onChange={set('email')} placeholder="you@example.com" />
+          <Input label="Email" type="email" value={form.email} onChange={set('email')} placeholder="Enter Your Email" />
           <Input label="Password" type="password" value={form.password} onChange={set('password')} placeholder="••••••••" />
 
           {error && (

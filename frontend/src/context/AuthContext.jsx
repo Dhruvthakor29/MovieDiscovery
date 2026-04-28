@@ -1,7 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const AuthContext = createContext(null);
-const API = 'http://localhost:5000/api';
+const API = 'https://cloudtv-s74y.onrender.com/';
+
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);

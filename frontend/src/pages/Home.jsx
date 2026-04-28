@@ -66,7 +66,7 @@ const Home = () => {
 
   const loadTrendingSearches = async () => {
     try {
-      const res = await fetch(`${BACKEND}/movies/trending-searches`);
+      const res = await fetch(`${BACKEND}/api/movies/trending-searches`);
       const data = await res.json();
       setTrendingSearches(data.results || []);
     } catch {}

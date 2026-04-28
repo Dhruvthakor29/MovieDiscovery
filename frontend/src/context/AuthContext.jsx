@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const AuthContext = createContext(null);
-const API = 'https://cloudtv-s74y.onrender.com/';
+const API = 'https://cloudtv-s74y.onrender.com';
 
 
 export const AuthProvider = ({ children }) => {

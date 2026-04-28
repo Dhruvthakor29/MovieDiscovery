@@ -9,7 +9,7 @@ const API_BASE_URL = 'https://api.themoviedb.org/3';
 const ACCESS_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI4ZGU4MWEwZjM1MzI5NWJiNmNhODM2OGMwM2JmZTVmNyIsIm5iZiI6MTczODMyNjA3NC40NDksInN1YiI6IjY3OWNjMDNhZDgwMTcwZWU1NTAxMWI3ZCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.Rk6ES293ldV0OblY1WPdU_l3-mT9LNreKVsJMrMo0X4';
 console.log(ACCESS_TOKEN);
 
-const BACKEND = 'https://cloudtv-s74y.onrender.com/';
+const BACKEND = 'https://cloudtv-s74y.onrender.com';
 
 const options = {
   method: 'GET',

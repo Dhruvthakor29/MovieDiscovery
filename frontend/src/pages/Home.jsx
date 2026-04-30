@@ -25,23 +25,19 @@ const Home = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showAuth, setShowAuth] = useState(false);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
 
   useDebounce(() => {
     setDebouncedSearch(searchTerm);
-    setPage(1);
-    setMovieList([]);
   }, 500, [searchTerm]);
 
-  const fetchMovies = useCallback(async (query = '', pageNum = 1) => {
+  const fetchMovies = useCallback(async (query = '') => {
     setIsLoading(true);
     setErrorMessage('');
 
     try {
       const endpoint = query
-        ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}&page=${pageNum}`
-        : `${API_BASE_URL}/discover/movie?include_adult=false&with_original_language=hi&page=${pageNum}&sort_by=popularity.desc`;
+        ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}&page=1`
+        : `${API_BASE_URL}/discover/movie?include_adult=false&with_original_language=hi&page=1&sort_by=popularity.desc`;
 
       const res = await fetch(endpoint, options);
       if (!res.ok) throw new Error();
@@ -54,9 +50,8 @@ const Home = () => {
       }
 
       setMovieList(data.results);
-      setTotalPages(Math.min(data.total_pages, 50));
 
-      if (query && data.results[0] && pageNum === 1) {
+      if (query && data.results[0]) {
         fetch(`${BACKEND}/api/movies/search-count`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -79,15 +74,10 @@ const Home = () => {
   };
 
   useEffect(() => {
-    fetchMovies(debouncedSearch, page);
-  }, [debouncedSearch, page]);
+    fetchMovies(debouncedSearch);
+  }, [debouncedSearch]);
 
   useEffect(() => { loadTrendingSearches(); }, []);
-
-  const handlePageChange = (newPage) => {
-    setPage(newPage);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
 
   return (
     <main className="pt-14">
@@ -129,42 +119,15 @@ const Home = () => {
           ) : errorMessage ? (
             <p className="text-red-400 text-sm">{errorMessage}</p>
           ) : (
-            <>
-              <ul>
-                {movieList.map((movie, i) => (
-                  <MovieCard
-                    key={`${movie.id}-${i}`}
-                    movie={movie}
-                    onAuthRequired={() => setShowAuth(true)}
-                  />
-                ))}
-              </ul>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-3 mt-10 mb-6">
-                  <button
-                    onClick={() => handlePageChange(page - 1)}
-                    disabled={page === 1}
-                    className="px-4 py-2 rounded-lg bg-white/10 text-white text-sm disabled:opacity-30 hover:bg-white/20 transition"
-                  >
-                    ← Prev
-                  </button>
-
-                  <span className="text-white/60 text-sm">
-                    Page {page} of {totalPages}
-                  </span>
-
-                  <button
-                    onClick={() => handlePageChange(page + 1)}
-                    disabled={page === totalPages}
-                    className="px-4 py-2 rounded-lg bg-white/10 text-white text-sm disabled:opacity-30 hover:bg-white/20 transition"
-                  >
-                    Next →
-                  </button>
-                </div>
-              )}
-            </>
+            <ul>
+              {movieList.map((movie, i) => (
+                <MovieCard
+                  key={`${movie.id}-${i}`}
+                  movie={movie}
+                  onAuthRequired={() => setShowAuth(true)}
+                />
+              ))}
+            </ul>
           )}
         </section>
       </div>

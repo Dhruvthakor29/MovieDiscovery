@@ -39,7 +39,7 @@ const Navbar = () => {
             className="flex items-center gap-2 flex-shrink-0"
           >
             <span className="text-lg">🎬</span>
-            <span className="font-bold text-white text-sm hidden xs:block">Cloud TV</span>
+            <span className="font-bold text-white text-sm hidden xs:block">StreamVerse</span>
           </button>
 
           {/* Desktop Links */}

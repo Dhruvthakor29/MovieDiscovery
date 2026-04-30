@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useDebounce } from 'react-use';
 import Search from '../components/search';
 import Spinner from '../components/spinner';
@@ -7,8 +7,6 @@ import AuthModal from '../components/AuthModal';
 
 const API_BASE_URL = 'https://api.themoviedb.org/3';
 const ACCESS_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI4ZGU4MWEwZjM1MzI5NWJiNmNhODM2OGMwM2JmZTVmNyIsIm5iZiI6MTczODMyNjA3NC40NDksInN1YiI6IjY3OWNjMDNhZDgwMTcwZWU1NTAxMWI3ZCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.Rk6ES293ldV0OblY1WPdU_l3-mT9LNreKVsJMrMo0X4';
-console.log(ACCESS_TOKEN);
-
 const BACKEND = 'https://cloudtv-s74y.onrender.com';
 
 const options = {
@@ -27,40 +25,62 @@ const Home = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showAuth, setShowAuth] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
 
-  useDebounce(() => setDebouncedSearch(searchTerm), 500, [searchTerm]);
+  // Sentinel div ref — IntersectionObserver watches this
+  const sentinelRef = useRef(null);
+  const isLoadingRef = useRef(false); // prevent duplicate fetches
 
-  const fetchMovies = useCallback(async (query = '') => {
-    setIsLoading(true);
+  useDebounce(() => {
+    setDebouncedSearch(searchTerm);
+    setPage(1);          // reset to page 1 on new search
+    setMovieList([]);    // clear old results
+  }, 500, [searchTerm]);
+
+  const fetchMovies = useCallback(async (query = '', pageNum = 1) => {
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
+
+    if (pageNum === 1) setIsLoading(true);
+    else setIsFetchingMore(true);
+
     setErrorMessage('');
+
     try {
       const endpoint = query
-        ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}`
-        : `${API_BASE_URL}/discover/movie?include_adult=false&with_original_language=hi&page=1&sort_by=popularity.desc`;
+        ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}&page=${pageNum}`
+        : `${API_BASE_URL}/discover/movie?include_adult=false&with_original_language=hi&page=${pageNum}&sort_by=popularity.desc`;
 
       const res = await fetch(endpoint, options);
       if (!res.ok) throw new Error();
       const data = await res.json();
 
-      if (!data.results?.length) {
+      if (!data.results?.length && pageNum === 1) {
         setErrorMessage('No movies found.');
         setMovieList([]);
         return;
       }
 
-      setMovieList(data.results);
+      // Append new results (or replace on page 1)
+      setMovieList(prev => pageNum === 1 ? data.results : [...prev, ...data.results]);
+      setTotalPages(Math.min(data.total_pages, 50)); // cap at 50 pages
 
-      if (query && data.results[0]) {
-        await fetch(`${BACKEND}/api/movies/search-count`, {
+      // Track search count (only on first page, first result)
+      if (query && data.results[0] && pageNum === 1) {
+        fetch(`${BACKEND}/api/movies/search-count`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ searchTerm: query, movie: data.results[0] }),
         }).catch(() => {});
       }
     } catch {
-      setErrorMessage('Error fetching movies. Please try again later.');
+      if (pageNum === 1) setErrorMessage('Error fetching movies. Please try again later.');
     } finally {
       setIsLoading(false);
+      setIsFetchingMore(false);
+      isLoadingRef.current = false;
     }
   }, []);
 
@@ -72,8 +92,36 @@ const Home = () => {
     } catch {}
   };
 
-  useEffect(() => { fetchMovies(debouncedSearch); }, [debouncedSearch]);
+  // Fetch when search or page changes
+  useEffect(() => {
+    fetchMovies(debouncedSearch, page);
+  }, [debouncedSearch, page]);
+
   useEffect(() => { loadTrendingSearches(); }, []);
+
+  // IntersectionObserver — watches sentinel div at bottom
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        // When sentinel is visible AND we have more pages AND not already loading
+        if (entry.isIntersecting && page < totalPages && !isLoadingRef.current) {
+          setPage(prev => prev + 1);
+        }
+      },
+      {
+        root: null,        // viewport
+        rootMargin: '200px', // trigger 200px before hitting bottom
+        threshold: 0,
+      }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [page, totalPages]);
 
   return (
     <main className="pt-14">
@@ -85,7 +133,7 @@ const Home = () => {
           <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
         </header>
 
-        {/* Trending searches from MongoDB */}
+        {/* Trending searches */}
         {trendingSearches.length > 0 && (
           <section className="trending mt-16">
             <h2>🔥 Trending Searches</h2>
@@ -111,16 +159,40 @@ const Home = () => {
         {/* Movie grid */}
         <section className="all-movies mt-16">
           <h2>{searchTerm ? `Results for "${searchTerm}"` : '🎬 All Movies'}</h2>
+
           {isLoading ? (
             <Spinner />
           ) : errorMessage ? (
             <p className="text-red-400 text-sm">{errorMessage}</p>
           ) : (
-            <ul>
-              {movieList.map(movie => (
-                <MovieCard key={movie.id} movie={movie} onAuthRequired={() => setShowAuth(true)} />
-              ))}
-            </ul>
+            <>
+              <ul>
+                {movieList.map((movie, i) => (
+                  <MovieCard
+                    key={`${movie.id}-${i}`}
+                    movie={movie}
+                    onAuthRequired={() => setShowAuth(true)}
+                  />
+                ))}
+              </ul>
+
+              {/* Loading more spinner */}
+              {isFetchingMore && (
+                <div className="flex justify-center mt-8">
+                  <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+
+              {/* End of results message */}
+              {!isFetchingMore && movieList.length > 0 && page >= totalPages && (
+                <p className="text-center text-white/30 text-sm mt-8 mb-4">
+                  You've reached the end ✓
+                </p>
+              )}
+
+              {/* Invisible sentinel — triggers load more when scrolled into view */}
+              <div ref={sentinelRef} className="h-4 w-full" />
+            </>
           )}
         </section>
       </div>

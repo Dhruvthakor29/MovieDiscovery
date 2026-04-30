@@ -26,6 +26,7 @@ const MovieDetails = () => {
   const [movie, setMovie] = useState(null);
   const [trailer, setTrailer] = useState(null);
   const [cast, setCast] = useState([]);
+  const [imdbId, setImdbId] = useState(null);
   const [wlLoading, setWlLoading] = useState(false);
   const [favLoading, setFavLoading] = useState(false);
 
@@ -40,6 +41,12 @@ const MovieDetails = () => {
         const creditsData = await creditsRes.json();
 
         setMovie(movieData);
+
+        // IMDB id comes directly in movie details response
+        // e.g. movieData.imdb_id = "tt14993250"
+        if (movieData.imdb_id) {
+          setImdbId(movieData.imdb_id);
+        }
 
         const videos = movieData.videos?.results || [];
         const found =
@@ -58,6 +65,26 @@ const MovieDetails = () => {
     window.scrollTo(0, 0);
   }, [id]);
 
+  const handleBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate('/');
+  };
+
+  const handleWatchMovie = () => {
+    if (!imdbId) return;
+    // Build stream URL: https://streamimdb.ru/embed/movie/tt14993250
+    const streamUrl = `https://streamimdb.ru/embed/movie/${imdbId}`;
+    window.open(streamUrl, '_blank');
+  };
+
+  const openTrailer = () => {
+    if (trailer) {
+      window.open(`https://www.youtube.com/watch?v=${trailer.key}`, '_blank');
+    } else {
+      window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + ' official trailer')}`, '_blank');
+    }
+  };
+
   const handleWatchlist = async () => {
     if (!user) return;
     setWlLoading(true);
@@ -74,14 +101,6 @@ const MovieDetails = () => {
       if (isInFavourites(movie.id)) await removeFromFavourites(movie.id);
       else await addToFavourites({ id: movie.id, title: movie.title, poster_path: movie.poster_path, vote_average: movie.vote_average, release_date: movie.release_date });
     } finally { setFavLoading(false); }
-  };
-
-  const openTrailer = () => {
-    if (trailer) {
-      window.open(`https://www.youtube.com/watch?v=${trailer.key}`, '_blank');
-    } else {
-      window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + ' official trailer')}`, '_blank');
-    }
   };
 
   if (!movie) return (
@@ -111,13 +130,13 @@ const MovieDetails = () => {
 
         {/* Back button */}
         <button
-          onClick={() => navigate(-1)}
-          className="absolute top-5 left-5 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/50 hover:bg-black/70 text-white/80 hover:text-white text-sm transition-all backdrop-blur-sm border border-white/10"
+          onClick={handleBack}
+          className="absolute top-5 left-5 z-20 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/50 hover:bg-black/70 text-white/80 hover:text-white text-sm transition-all backdrop-blur-sm border border-white/10"
         >
           ← Back
         </button>
 
-        {/* Play button overlay on backdrop */}
+        {/* Play trailer overlay */}
         <button
           onClick={openTrailer}
           className="absolute inset-0 flex flex-col items-center justify-center gap-3 group"
@@ -173,6 +192,24 @@ const MovieDetails = () => {
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-3 mb-6">
+
+              {/* 🎬 Watch Movie — main CTA */}
+              <button
+                onClick={handleWatchMovie}
+                disabled={!imdbId}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg ${
+                  imdbId
+                    ? 'bg-gradient-to-r from-purple-600 to-violet-600 hover:opacity-90 hover:scale-105 text-white shadow-purple-900/40'
+                    : 'bg-white/10 text-white/30 cursor-not-allowed'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                {imdbId ? 'Watch Movie' : 'Not Available'}
+              </button>
+
+              {/* 🎞 Watch Trailer */}
               <button
                 onClick={openTrailer}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold text-sm transition-all hover:scale-105 shadow-lg shadow-red-900/30"
@@ -183,6 +220,7 @@ const MovieDetails = () => {
                 {trailer ? 'Watch Trailer' : 'Search Trailer'}
               </button>
 
+              {/* 🔖 Watchlist */}
               {user && (
                 <button
                   onClick={handleWatchlist}
@@ -197,6 +235,7 @@ const MovieDetails = () => {
                 </button>
               )}
 
+              {/* ❤️ Favourite */}
               {user && (
                 <button
                   onClick={handleFavourite}
@@ -211,6 +250,13 @@ const MovieDetails = () => {
                 </button>
               )}
             </div>
+
+            {/* IMDB id badge — small info */}
+            {imdbId && (
+              <p className="text-[11px] text-white/20">
+                IMDB: <span className="font-mono">{imdbId}</span>
+              </p>
+            )}
           </div>
         </div>
 

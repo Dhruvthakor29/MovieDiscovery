@@ -16,7 +16,7 @@ app.use(
     origin: function (origin, callback) {
       const allowedOrigins = [
         "http://localhost:5173",
-        "https://movie-discovery-self.vercel.app/"
+        "https://movie-discovery-self.vercel.app"
       ];
 
       // allow requests with no origin (like Postman)

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useDebounce } from 'react-use';
 import Search from '../components/search';
 import Spinner from '../components/spinner';
@@ -27,25 +27,15 @@ const Home = () => {
   const [showAuth, setShowAuth] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [isFetchingMore, setIsFetchingMore] = useState(false);
-
-  // Sentinel div ref — IntersectionObserver watches this
-  const sentinelRef = useRef(null);
-  const isLoadingRef = useRef(false); // prevent duplicate fetches
 
   useDebounce(() => {
     setDebouncedSearch(searchTerm);
-    setPage(1);          // reset to page 1 on new search
-    setMovieList([]);    // clear old results
+    setPage(1);
+    setMovieList([]);
   }, 500, [searchTerm]);
 
   const fetchMovies = useCallback(async (query = '', pageNum = 1) => {
-    if (isLoadingRef.current) return;
-    isLoadingRef.current = true;
-
-    if (pageNum === 1) setIsLoading(true);
-    else setIsFetchingMore(true);
-
+    setIsLoading(true);
     setErrorMessage('');
 
     try {
@@ -57,17 +47,15 @@ const Home = () => {
       if (!res.ok) throw new Error();
       const data = await res.json();
 
-      if (!data.results?.length && pageNum === 1) {
+      if (!data.results?.length) {
         setErrorMessage('No movies found.');
         setMovieList([]);
         return;
       }
 
-      // Append new results (or replace on page 1)
-      setMovieList(prev => pageNum === 1 ? data.results : [...prev, ...data.results]);
-      setTotalPages(Math.min(data.total_pages, 50)); // cap at 50 pages
+      setMovieList(data.results);
+      setTotalPages(Math.min(data.total_pages, 50));
 
-      // Track search count (only on first page, first result)
       if (query && data.results[0] && pageNum === 1) {
         fetch(`${BACKEND}/api/movies/search-count`, {
           method: 'POST',
@@ -76,11 +64,9 @@ const Home = () => {
         }).catch(() => {});
       }
     } catch {
-      if (pageNum === 1) setErrorMessage('Error fetching movies. Please try again later.');
+      setErrorMessage('Error fetching movies. Please try again later.');
     } finally {
       setIsLoading(false);
-      setIsFetchingMore(false);
-      isLoadingRef.current = false;
     }
   }, []);
 
@@ -92,36 +78,16 @@ const Home = () => {
     } catch {}
   };
 
-  // Fetch when search or page changes
   useEffect(() => {
     fetchMovies(debouncedSearch, page);
   }, [debouncedSearch, page]);
 
   useEffect(() => { loadTrendingSearches(); }, []);
 
-  // IntersectionObserver — watches sentinel div at bottom
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        // When sentinel is visible AND we have more pages AND not already loading
-        if (entry.isIntersecting && page < totalPages && !isLoadingRef.current) {
-          setPage(prev => prev + 1);
-        }
-      },
-      {
-        root: null,        // viewport
-        rootMargin: '200px', // trigger 200px before hitting bottom
-        threshold: 0,
-      }
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [page, totalPages]);
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <main className="pt-14">
@@ -133,7 +99,6 @@ const Home = () => {
           <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
         </header>
 
-        {/* Trending searches */}
         {trendingSearches.length > 0 && (
           <section className="trending mt-16">
             <h2>🔥 Trending Searches</h2>
@@ -156,7 +121,6 @@ const Home = () => {
           </section>
         )}
 
-        {/* Movie grid */}
         <section className="all-movies mt-16">
           <h2>{searchTerm ? `Results for "${searchTerm}"` : '🎬 All Movies'}</h2>
 
@@ -176,22 +140,30 @@ const Home = () => {
                 ))}
               </ul>
 
-              {/* Loading more spinner */}
-              {isFetchingMore && (
-                <div className="flex justify-center mt-8">
-                  <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-3 mt-10 mb-6">
+                  <button
+                    onClick={() => handlePageChange(page - 1)}
+                    disabled={page === 1}
+                    className="px-4 py-2 rounded-lg bg-white/10 text-white text-sm disabled:opacity-30 hover:bg-white/20 transition"
+                  >
+                    ← Prev
+                  </button>
+
+                  <span className="text-white/60 text-sm">
+                    Page {page} of {totalPages}
+                  </span>
+
+                  <button
+                    onClick={() => handlePageChange(page + 1)}
+                    disabled={page === totalPages}
+                    className="px-4 py-2 rounded-lg bg-white/10 text-white text-sm disabled:opacity-30 hover:bg-white/20 transition"
+                  >
+                    Next →
+                  </button>
                 </div>
               )}
-
-              {/* End of results message */}
-              {!isFetchingMore && movieList.length > 0 && page >= totalPages && (
-                <p className="text-center text-white/30 text-sm mt-8 mb-4">
-                  You've reached the end ✓
-                </p>
-              )}
-
-              {/* Invisible sentinel — triggers load more when scrolled into view */}
-              <div ref={sentinelRef} className="h-4 w-full" />
             </>
           )}
         </section>

@@ -47,7 +47,7 @@ const AuthModal = ({ onClose }) => {
       style={{ backdropFilter: 'blur(12px)', background: 'rgba(3,0,20,0.75)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="w-full max-w-md bg-[#0f0d23] border border-white/10 rounded-2xl overflow-hidden shadow-2xl animate-fade-in">
+      <div className="w-full max-w-md bg-dark-100 border border-white/10 rounded-2xl overflow-hidden shadow-2xl animate-fade-in">
         {/* Header */}
         <div className="relative p-6 pb-0">
           <button
@@ -58,7 +58,7 @@ const AuthModal = ({ onClose }) => {
           </button>
           <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-violet-700 flex items-center justify-center text-sm">🎬</div>
-            <span className="text-white font-bold text-lg">MyMovie</span>
+            <span className="text-white font-bold text-lg">StreamVerse</span>
           </div>
 
           {/* Tabs */}

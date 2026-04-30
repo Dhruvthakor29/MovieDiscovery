@@ -28,7 +28,7 @@ const Home = () => {
 
   useDebounce(() => {
     setDebouncedSearch(searchTerm);
-  }, 500, [searchTerm]);
+  }, 1000, [searchTerm]);
 
   const fetchMovies = useCallback(async (query = '') => {
     setIsLoading(true);

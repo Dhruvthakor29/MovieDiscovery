@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import AuthModal from "../components/AuthModal";
 import { useAuth } from "../context/AuthContext";
 
 const API_BASE_URL = "https://api.themoviedb.org/3";
@@ -22,7 +23,7 @@ const MovieDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isInWatchlist, isInFavourites, addToWatchlist, removeFromWatchlist, addToFavourites, removeFromFavourites } = useAuth();
-
+  const [showAuth, setShowAuth] = useState(false);
   const [movie, setMovie] = useState(null);
   const [trailer, setTrailer] = useState(null);
   const [cast, setCast] = useState([]);
@@ -84,6 +85,19 @@ const MovieDetails = () => {
       window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + ' official trailer')}`, '_blank');
     }
   };
+
+
+
+
+  const handleClick = () => {
+    if (!user) {
+      setShowAuth(true); // open login modal
+      return;
+    }
+
+    handleWatchMovie(); // only runs if logged in
+  };
+
 
   const handleWatchlist = async () => {
     if (!user) return;
@@ -194,20 +208,25 @@ const MovieDetails = () => {
             <div className="flex flex-wrap gap-3 mb-6">
 
               {/* 🎬 Watch Movie — main CTA */}
+
               <button
-                onClick={handleWatchMovie}
+                onClick={handleClick}
                 disabled={!imdbId}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg ${
-                  imdbId
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg ${imdbId
                     ? 'bg-gradient-to-r from-purple-600 to-violet-600 hover:opacity-90 hover:scale-105 text-white shadow-purple-900/40'
                     : 'bg-white/10 text-white/30 cursor-not-allowed'
-                }`}
+                  }`}
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z" />
                 </svg>
                 {imdbId ? 'Watch Movie' : 'Not Available'}
               </button>
+
+
+
+
+
 
               {/* 🎞 Watch Trailer */}
               <button
@@ -225,11 +244,10 @@ const MovieDetails = () => {
                 <button
                   onClick={handleWatchlist}
                   disabled={wlLoading}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all border ${
-                    inWatchlist
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all border ${inWatchlist
                       ? 'bg-purple-600 border-purple-500 text-white'
                       : 'bg-white/5 border-white/15 text-white/80 hover:bg-white/10'
-                  }`}
+                    }`}
                 >
                   {wlLoading ? '…' : inWatchlist ? '🔖 In Watchlist' : '🔖 Add to Watchlist'}
                 </button>
@@ -240,11 +258,10 @@ const MovieDetails = () => {
                 <button
                   onClick={handleFavourite}
                   disabled={favLoading}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all border ${
-                    inFavourites
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all border ${inFavourites
                       ? 'bg-red-500 border-red-400 text-white'
                       : 'bg-white/5 border-white/15 text-white/80 hover:bg-white/10'
-                  }`}
+                    }`}
                 >
                   {favLoading ? '…' : inFavourites ? '❤️ Favourited' : '♡ Add to Favourites'}
                 </button>
@@ -308,9 +325,13 @@ const MovieDetails = () => {
               ))}
             </div>
           </div>
+          
         )}
+        
       </div>
+         {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
     </div>
+    
   );
 };
 

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const AuthContext = createContext(null);
-const API = 'https://movie-discovery-self.vercel.app';
+const API = 'https://cloudtv-s74y.onrender.com';
 
 // helpers to persist user in localStorage
 const saveUser = (user) => localStorage.setItem('mm_user', JSON.stringify(user));

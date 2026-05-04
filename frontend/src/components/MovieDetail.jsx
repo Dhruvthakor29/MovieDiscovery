@@ -231,11 +231,10 @@ const MovieDetails = () => {
               <button
                 onClick={() => imdbId && setShowPlayer(true)}
                 disabled={!imdbId}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg ${
-                  imdbId
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg ${imdbId
                     ? 'bg-gradient-to-r from-purple-600 to-violet-600 hover:opacity-90 hover:scale-105 text-white shadow-purple-900/40 cursor-pointer'
                     : 'bg-white/10 text-white/30 cursor-not-allowed'
-                }`}
+                  }`}
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z" />
@@ -259,11 +258,10 @@ const MovieDetails = () => {
                 <button
                   onClick={handleWatchlist}
                   disabled={wlLoading}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all border ${
-                    inWatchlist
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all border ${inWatchlist
                       ? 'bg-purple-600 border-purple-500 text-white'
                       : 'bg-white/5 border-white/15 text-white/80 hover:bg-white/10'
-                  }`}
+                    }`}
                 >
                   {wlLoading ? '…' : inWatchlist ? '🔖 In Watchlist' : '🔖 Add to Watchlist'}
                 </button>
@@ -274,11 +272,10 @@ const MovieDetails = () => {
                 <button
                   onClick={handleFavourite}
                   disabled={favLoading}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all border ${
-                    inFavourites
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all border ${inFavourites
                       ? 'bg-red-500 border-red-400 text-white'
                       : 'bg-white/5 border-white/15 text-white/80 hover:bg-white/10'
-                  }`}
+                    }`}
                 >
                   {favLoading ? '…' : inFavourites ? '❤️ Favourited' : '♡ Add to Favourites'}
                 </button>

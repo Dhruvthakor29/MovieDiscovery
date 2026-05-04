@@ -37,7 +37,7 @@ const Home = () => {
     try {
       const endpoint = query
         ? `${API_BASE_URL}/search/movie?query=${encodeURIComponent(query)}&page=1`
-        : `${API_BASE_URL}/discover/movie?include_adult=false&with_original_language=hi&page=1&sort_by=popularity.desc`;
+        : `${API_BASE_URL}/discover/movie?with_original_language=hi&language=en-US&sort_by=popularity.desc`;
 
       const res = await fetch(endpoint, options);
       if (!res.ok) throw new Error();

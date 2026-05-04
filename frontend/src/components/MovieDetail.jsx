@@ -1,6 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import AuthModal from "../components/AuthModal";
 import { useAuth } from "../context/AuthContext";
 
 const API_BASE_URL = "https://api.themoviedb.org/3";
@@ -23,11 +22,12 @@ const MovieDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isInWatchlist, isInFavourites, addToWatchlist, removeFromWatchlist, addToFavourites, removeFromFavourites } = useAuth();
-  const [showAuth, setShowAuth] = useState(false);
+
   const [movie, setMovie] = useState(null);
   const [trailer, setTrailer] = useState(null);
   const [cast, setCast] = useState([]);
   const [imdbId, setImdbId] = useState(null);
+  const [showPlayer, setShowPlayer] = useState(false); // controls iframe modal
   const [wlLoading, setWlLoading] = useState(false);
   const [favLoading, setFavLoading] = useState(false);
 
@@ -42,12 +42,7 @@ const MovieDetails = () => {
         const creditsData = await creditsRes.json();
 
         setMovie(movieData);
-
-        // IMDB id comes directly in movie details response
-        // e.g. movieData.imdb_id = "tt14993250"
-        if (movieData.imdb_id) {
-          setImdbId(movieData.imdb_id);
-        }
+        if (movieData.imdb_id) setImdbId(movieData.imdb_id);
 
         const videos = movieData.videos?.results || [];
         const found =
@@ -66,38 +61,23 @@ const MovieDetails = () => {
     window.scrollTo(0, 0);
   }, [id]);
 
+  // Close player on Escape key
+  useEffect(() => {
+    const handleKey = (e) => { if (e.key === 'Escape') setShowPlayer(false); };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
+
+  // Prevent background scroll when player is open
+  useEffect(() => {
+    document.body.style.overflow = showPlayer ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [showPlayer]);
+
   const handleBack = () => {
     if (window.history.length > 1) navigate(-1);
     else navigate('/');
   };
-
-  const handleWatchMovie = () => {
-    if (!imdbId) return;
-    // Build stream URL: https://streamimdb.ru/embed/movie/tt14993250
-    const streamUrl = `https://streamimdb.ru/embed/movie/${imdbId}`;
-    window.open(streamUrl, '_blank');
-  };
-
-  const openTrailer = () => {
-    if (trailer) {
-      window.open(`https://www.youtube.com/watch?v=${trailer.key}`, '_blank');
-    } else {
-      window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + ' official trailer')}`, '_blank');
-    }
-  };
-
-
-
-
-  const handleClick = () => {
-    if (!user) {
-      setShowAuth(true); // open login modal
-      return;
-    }
-
-    handleWatchMovie(); // only runs if logged in
-  };
-
 
   const handleWatchlist = async () => {
     if (!user) return;
@@ -117,6 +97,11 @@ const MovieDetails = () => {
     } finally { setFavLoading(false); }
   };
 
+  const openTrailer = () => {
+    if (trailer) window.open(`https://www.youtube.com/watch?v=${trailer.key}`, '_blank');
+    else window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(movie.title + ' official trailer')}`, '_blank');
+  };
+
   if (!movie) return (
     <div className="flex items-center justify-center min-h-screen bg-primary">
       <div className="flex flex-col items-center gap-3">
@@ -131,6 +116,41 @@ const MovieDetails = () => {
 
   return (
     <div className="min-h-screen bg-primary text-white pt-14">
+
+      {/* ── MOVIE PLAYER MODAL ── */}
+      {showPlayer && imdbId && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col"
+          style={{ background: 'rgba(0,0,0,0.97)' }}
+        >
+          {/* Modal header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-white truncate max-w-[200px] md:max-w-none">
+                {movie.title}
+              </span>
+              <span className="text-xs text-white/30">{movie.release_date?.slice(0, 4)}</span>
+            </div>
+            <button
+              onClick={() => setShowPlayer(false)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-sm transition-all"
+            >
+              ✕ Close
+            </button>
+          </div>
+
+          {/* iframe — fills remaining height, URL hidden from user */}
+          <div className="flex-1 relative">
+            <iframe
+              src={`https://streamimdb.ru/embed/movie/${imdbId}`}
+              className="w-full h-full border-0"
+              allowFullScreen
+              allow="autoplay; fullscreen; picture-in-picture"
+              title={movie.title}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Backdrop */}
       <div className="relative w-full h-[55vh] overflow-hidden">
@@ -150,7 +170,7 @@ const MovieDetails = () => {
           ← Back
         </button>
 
-        {/* Play trailer overlay */}
+        {/* Trailer play overlay */}
         <button
           onClick={openTrailer}
           className="absolute inset-0 flex flex-col items-center justify-center gap-3 group"
@@ -207,15 +227,15 @@ const MovieDetails = () => {
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-3 mb-6">
 
-              {/* 🎬 Watch Movie — main CTA */}
-
+              {/* Watch Movie — opens iframe modal */}
               <button
-                onClick={handleClick}
+                onClick={() => imdbId && setShowPlayer(true)}
                 disabled={!imdbId}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg ${imdbId
-                    ? 'bg-gradient-to-r from-purple-600 to-violet-600 hover:opacity-90 hover:scale-105 text-white shadow-purple-900/40'
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg ${
+                  imdbId
+                    ? 'bg-gradient-to-r from-purple-600 to-violet-600 hover:opacity-90 hover:scale-105 text-white shadow-purple-900/40 cursor-pointer'
                     : 'bg-white/10 text-white/30 cursor-not-allowed'
-                  }`}
+                }`}
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z" />
@@ -223,12 +243,7 @@ const MovieDetails = () => {
                 {imdbId ? 'Watch Movie' : 'Not Available'}
               </button>
 
-
-
-
-
-
-              {/* 🎞 Watch Trailer */}
+              {/* Trailer */}
               <button
                 onClick={openTrailer}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold text-sm transition-all hover:scale-105 shadow-lg shadow-red-900/30"
@@ -239,41 +254,36 @@ const MovieDetails = () => {
                 {trailer ? 'Watch Trailer' : 'Search Trailer'}
               </button>
 
-              {/* 🔖 Watchlist */}
+              {/* Watchlist */}
               {user && (
                 <button
                   onClick={handleWatchlist}
                   disabled={wlLoading}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all border ${inWatchlist
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all border ${
+                    inWatchlist
                       ? 'bg-purple-600 border-purple-500 text-white'
                       : 'bg-white/5 border-white/15 text-white/80 hover:bg-white/10'
-                    }`}
+                  }`}
                 >
                   {wlLoading ? '…' : inWatchlist ? '🔖 In Watchlist' : '🔖 Add to Watchlist'}
                 </button>
               )}
 
-              {/* ❤️ Favourite */}
+              {/* Favourite */}
               {user && (
                 <button
                   onClick={handleFavourite}
                   disabled={favLoading}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all border ${inFavourites
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all border ${
+                    inFavourites
                       ? 'bg-red-500 border-red-400 text-white'
                       : 'bg-white/5 border-white/15 text-white/80 hover:bg-white/10'
-                    }`}
+                  }`}
                 >
                   {favLoading ? '…' : inFavourites ? '❤️ Favourited' : '♡ Add to Favourites'}
                 </button>
               )}
             </div>
-
-            {/* IMDB id badge — small info */}
-            {imdbId && (
-              <p className="text-[11px] text-white/20">
-                IMDB: <span className="font-mono">{imdbId}</span>
-              </p>
-            )}
           </div>
         </div>
 
@@ -325,13 +335,9 @@ const MovieDetails = () => {
               ))}
             </div>
           </div>
-          
         )}
-        
       </div>
-         {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
     </div>
-    
   );
 };
 
